@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -490,7 +490,9 @@ const CAMPAIGNS = [
 // Normaliza strings: minúsculas, sin tildes, espacios simples
 function norm(s) {
     return s.replace(/\s+/g, ' ').trim().toLowerCase()
-        .normalize('NFD').replace(/[̀-ͯ]/g, '');
+        .replace(/[áàäâã]/g, 'a').replace(/[éèëê]/g, 'e')
+        .replace(/[íìïî]/g, 'i').replace(/[óòöôõ]/g, 'o')
+        .replace(/[úùüû]/g, 'u').replace(/[ñ]/g, 'n');
 }
 
 // Busca columna por coincidencia exacta normalizada, luego por palabras clave
@@ -918,4 +920,3 @@ function showAlert(type, icon, msg) {
 </script>
 </body>
 </html>
-Fix datos y logos
