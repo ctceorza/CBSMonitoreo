@@ -8,21 +8,24 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         :root {
-            --primary:       #1a5c38;
-            --primary-dark:  #0d3320;
-            --primary-light: #2d8a57;
+            /* Paleta CEORZA: azul corporativo + teal */
+            --primary:       #1a6fb3;
+            --primary-dark:  #0d4a7a;
+            --primary-light: #2d9fd4;
+            --teal:          #00b5a3;
+            --teal-dark:     #008f80;
             --accent:        #e8a020;
             --danger:        #c0392b;
             --warning:       #f39c12;
             --success:       #27ae60;
             --neutral:       #7f8c8d;
-            --bg:            #f0f4f0;
+            --bg:            #f0f5f9;
             --card:          #ffffff;
-            --text:          #1a2e1a;
-            --text-light:    #5a6e5a;
-            --border:        #d0e0d0;
-            --shadow:        0 2px 12px rgba(26,92,56,0.10);
-            --shadow-lg:     0 8px 32px rgba(26,92,56,0.18);
+            --text:          #1a2a3a;
+            --text-light:    #5a6a7a;
+            --border:        #d0dce8;
+            --shadow:        0 2px 12px rgba(26,111,179,0.10);
+            --shadow-lg:     0 8px 32px rgba(26,111,179,0.18);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -56,7 +59,7 @@
 
         /* ── HEADER ── */
         .header {
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 55%, var(--primary-light) 100%);
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--teal-dark) 100%);
             color: #fff;
             box-shadow: var(--shadow-lg);
             position: sticky; top: 0; z-index: 100;
@@ -78,6 +81,13 @@
             display: flex; align-items: center; justify-content: center;
             font-weight: 800; font-size: 16px; letter-spacing: 1.5px;
             color: #fff;
+        }
+        .logo-wrap {
+            background: #fff;
+            border-radius: 8px;
+            padding: 4px 10px;
+            display: flex; align-items: center; justify-content: center;
+            height: 44px;
         }
         .logo-role { font-size: 9px; opacity: 0.65; text-transform: uppercase; letter-spacing: 1.2px; }
         .logo-sep  { width: 1px; height: 44px; background: rgba(255,255,255,0.18); }
@@ -159,26 +169,26 @@
         }
         .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
 
-        .kpi-card.c-green  { border-top-color: #27ae60; }
-        .kpi-card.c-green::after  { background: #27ae60; }
+        .kpi-card.c-green  { border-top-color: var(--teal); }
+        .kpi-card.c-green::after  { background: var(--teal); }
         .kpi-card.c-red    { border-top-color: #e74c3c; }
         .kpi-card.c-red::after    { background: #e74c3c; }
         .kpi-card.c-yellow { border-top-color: #f39c12; }
         .kpi-card.c-yellow::after { background: #f39c12; }
-        .kpi-card.c-blue   { border-top-color: #2980b9; }
-        .kpi-card.c-blue::after   { background: #2980b9; }
-        .kpi-card.c-primary{ border-top-color: var(--primary); }
-        .kpi-card.c-primary::after{ background: var(--primary); }
+        .kpi-card.c-blue   { border-top-color: var(--primary); }
+        .kpi-card.c-blue::after   { background: var(--primary); }
+        .kpi-card.c-primary{ border-top-color: var(--primary-dark); }
+        .kpi-card.c-primary::after{ background: var(--primary-dark); }
 
         .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-light); font-weight: 700; margin-bottom: 7px; }
         .kpi-value { font-size: 38px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
         .kpi-sub   { font-size: 11px; color: var(--text-light); }
 
-        .kpi-card.c-green  .kpi-value { color: #27ae60; }
+        .kpi-card.c-green  .kpi-value { color: var(--teal); }
         .kpi-card.c-red    .kpi-value { color: #e74c3c; }
         .kpi-card.c-yellow .kpi-value { color: #f39c12; }
-        .kpi-card.c-blue   .kpi-value { color: #2980b9; }
-        .kpi-card.c-primary.kpi-value { color: var(--primary); }
+        .kpi-card.c-blue   .kpi-value { color: var(--primary); }
+        .kpi-card.c-primary .kpi-value { color: var(--primary-dark); }
 
         /* ── CHART CARD ── */
         .chart-card {
@@ -272,22 +282,25 @@
         <div class="header-logos">
             <!-- ANIN – Contratante -->
             <div class="logo-item">
-                <img id="logo-anin" class="logo-img" src="" alt="ANIN" style="display:none">
-                <div class="logo-box" id="logo-anin-box">ANIN</div>
+                <div class="logo-wrap">
+                    <img class="logo-img" src="https://lh3.googleusercontent.com/d/1BrJ8m_ocoPIQIyjpUgG30AeGRISBCfwV" alt="ANIN" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('beforeend','<span style=\'font-weight:800;font-size:14px;color:#1a6fb3\'>ANIN</span>')">
+                </div>
                 <span class="logo-role">Contratante</span>
             </div>
             <div class="logo-sep"></div>
             <!-- CBS – Contratista -->
             <div class="logo-item">
-                <img id="logo-cbs" class="logo-img" src="" alt="CBS" style="display:none">
-                <div class="logo-box" id="logo-cbs-box">CBS</div>
+                <div class="logo-wrap">
+                    <img class="logo-img" src="https://lh3.googleusercontent.com/d/1D5QVRr0mYWTqYQKRMBJpAcfTbb7Ne_Cl" alt="CBS" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('beforeend','<span style=\'font-weight:800;font-size:14px;color:#1a6fb3\'>CBS</span>')">
+                </div>
                 <span class="logo-role">Contratista</span>
             </div>
             <div class="logo-sep"></div>
             <!-- CEORZA – Subcontratista -->
             <div class="logo-item">
-                <img id="logo-ceorza" class="logo-img" src="" alt="CEORZA" style="display:none">
-                <div class="logo-box" id="logo-ceorza-box">CEORZA</div>
+                <div class="logo-wrap">
+                    <img class="logo-img" src="https://lh3.googleusercontent.com/d/1BmaaSB3wn4ZqyknYYOe174VF87LHh1gT" alt="CEORZA" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('beforeend','<span style=\'font-weight:800;font-size:14px;color:#1a6fb3\'>CEORZA</span>')">
+                </div>
                 <span class="logo-role">Subcontratista</span>
             </div>
         </div>
@@ -471,31 +484,57 @@ const CAMPAIGNS = [
 ];
 
 // ─────────────────────────────────────────────
-// COLUMN ACCESSORS  (handles double-spaces in headers)
+// COLUMN ACCESSORS — búsqueda robusta por palabras clave
 // ─────────────────────────────────────────────
-function col(row, key) {
-    if (row[key] !== undefined) return String(row[key] || '').trim();
-    const k = Object.keys(row).find(k => k.replace(/\s+/g,' ').trim() === key.replace(/\s+/g,' ').trim());
-    return k ? String(row[k] || '').trim() : '';
+
+// Normaliza strings: minúsculas, sin tildes, espacios simples
+function norm(s) {
+    return s.replace(/\s+/g, ' ').trim().toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+// Busca columna por coincidencia exacta normalizada, luego por palabras clave
+function findCol(row, ...keywords) {
+    const keys = Object.keys(row);
+    for (const kw of keywords) {
+        const n = norm(kw);
+        const k = keys.find(k => norm(k) === n);
+        if (k !== undefined) return String(row[k] || '').trim();
+    }
+    // Fallback: todas las palabras de la primera keyword deben aparecer en la clave
+    const words = norm(keywords[0]).split(' ').filter(w => w.length > 2);
+    const k = keys.find(key => words.every(w => norm(key).includes(w)));
+    return k !== undefined ? String(row[k] || '').trim() : '';
+}
+
+// Normaliza valores de estado a primera letra mayúscula (Vivo→V, Malo→M, Bueno→B, etc.)
+function firstLetter(val) {
+    const v = val.trim();
+    if (!v) return '';
+    const upper = v.toUpperCase();
+    // Si ya es una sola letra válida, devolverla
+    if (upper.length === 1) return upper;
+    // Si empieza con V,M,B,R devolverla — cubre "Vivo","Muerto","Bueno","Regular","Malo"
+    return upper.charAt(0);
 }
 
 const C = {
-    estacion:   r => col(r, 'Estación de monitoreo'),
-    cientifico: r => col(r, 'Nombre científico'),
-    comun:      r => col(r, 'Nombre común'),
-    individuo:  r => col(r, 'N° de individuo'),
-    este:       r => parseFloat(col(r, 'Este'))   || 0,
-    norte:      r => parseFloat(col(r, 'Norte'))  || 0,
-    altura:     r => { const v = parseFloat(col(r, 'Altura (cm)')); return isNaN(v) ? null : v; },
-    diamCopa:   r => { const v = parseFloat(col(r, 'Diámetro Copa (cm)')); return isNaN(v) ? null : v; },
-    estado:     r => col(r, 'Estado  V=Vivo o M=Muerto').toUpperCase() || col(r, 'Estado V=Vivo o M=Muerto').toUpperCase(),
-    fito:       r => col(r, 'Estado  Fitosanitario B o R o M').toUpperCase() || col(r, 'Estado Fitosanitario B o R o M').toUpperCase(),
-    hidrico:    r => col(r, 'Condiciones  Hídricas') || col(r, 'Condiciones Hídricas') || 'Sin dato',
-    inclinacion:r => col(r, 'Inclinación'),
-    dano:       r => col(r, 'Daño Mecánico  (ramas/raíces)') || col(r, 'Daño Mecánico (ramas/raíces)'),
-    plaga:      r => col(r, 'Plaga /  Patógeno') || col(r, 'Plaga / Patógeno'),
-    obs:        r => col(r, 'Observaciones'),
-    areaBasal:  r => { const v = parseFloat(col(r, 'Área Basal  (cm²)') || col(r, 'Área Basal (cm²)')); return isNaN(v) ? null : v; },
+    estacion:    r => findCol(r, 'Estación de monitoreo',  'Estacion de monitoreo', 'estacion monitoreo'),
+    cientifico:  r => findCol(r, 'Nombre científico',      'Nombre cientifico',     'cientifico'),
+    comun:       r => findCol(r, 'Nombre común',           'Nombre comun',          'nombre comun'),
+    individuo:   r => findCol(r, 'N° de individuo',        'N de individuo',        'individuo'),
+    este:        r => parseFloat(findCol(r, 'Este')) || 0,
+    norte:       r => parseFloat(findCol(r, 'Norte')) || 0,
+    altura:      r => { const v = parseFloat(findCol(r, 'Altura (cm)', 'Altura')); return isNaN(v) ? null : v; },
+    diamCopa:    r => { const v = parseFloat(findCol(r, 'Diámetro Copa (cm)', 'Diametro Copa', 'copa')); return isNaN(v) ? null : v; },
+    estado:      r => firstLetter(findCol(r, 'Estado  V=Vivo o M=Muerto', 'Estado V=Vivo o M=Muerto', 'vivo muerto', 'estado vital')),
+    fito:        r => firstLetter(findCol(r, 'Estado  Fitosanitario B o R o M', 'Estado Fitosanitario', 'fitosanitario')),
+    hidrico:     r => findCol(r, 'Condiciones  Hídricas', 'Condiciones Hidricas', 'hidricas') || 'Sin dato',
+    inclinacion: r => findCol(r, 'Inclinación', 'Inclinacion'),
+    dano:        r => findCol(r, 'Daño Mecánico  (ramas/raíces)', 'Daño Mecanico', 'dano mecanico'),
+    plaga:       r => findCol(r, 'Plaga /  Patógeno', 'Plaga / Patogeno', 'plaga', 'patogeno'),
+    obs:         r => findCol(r, 'Observaciones'),
+    areaBasal:   r => { const v = parseFloat(findCol(r, 'Área Basal  (cm²)', 'Area Basal', 'basal')); return isNaN(v) ? null : v; },
 };
 
 // ─────────────────────────────────────────────
@@ -670,7 +709,7 @@ function chartHidrico(data) {
     const counts = {};
     data.forEach(r => { const h = C.hidrico(r) || 'Sin dato'; counts[h] = (counts[h]||0)+1; });
     const keys = Object.keys(counts), vals = Object.values(counts);
-    const colors = ['#1a5c38','#2d8a57','#5dade2','#f39c12','#e74c3c','#95a5a6','#8e44ad'];
+    const colors = ['#1a6fb3','#00b5a3','#2d9fd4','#f39c12','#e74c3c','#8e44ad','#95a5a6'];
     charts.hidrico = new Chart(get('cHidrico'), {
         type: 'doughnut',
         data: { labels: keys, datasets: [{ data: vals, backgroundColor: colors.slice(0, keys.length), borderWidth: 2, borderColor: '#fff' }] },
@@ -687,8 +726,8 @@ function chartAltura(data) {
     charts.altura = new Chart(get('cAltura'), {
         type: 'bar',
         data: { labels: labs, datasets: [
-            { label:'Altura prom. (cm)',       data: avgH, backgroundColor:'#1a5c38', borderRadius:6 },
-            { label:'Diám. Copa prom. (cm)',   data: avgD, backgroundColor:'#82c4a0', borderRadius:6 },
+            { label:'Altura prom. (cm)',       data: avgH, backgroundColor:'#1a6fb3', borderRadius:6 },
+            { label:'Diám. Copa prom. (cm)',   data: avgD, backgroundColor:'#00b5a3', borderRadius:6 },
         ]},
         options: { responsive:true, maintainAspectRatio:false,
             plugins:{ legend:{ labels:{ boxWidth:12, font:{size:11} } } },
@@ -702,7 +741,7 @@ function chartEspecies(data) {
     const counts = {};
     data.forEach(r => { const sp = C.cientifico(r) || C.comun(r) || 'Sin dato'; counts[sp] = (counts[sp]||0)+1; });
     const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,8);
-    const colors = ['#1a5c38','#2d8a57','#4db87a','#82c4a0','#8e44ad','#2980b9','#e67e22','#f39c12'];
+    const colors = ['#1a6fb3','#00b5a3','#2d9fd4','#0d4a7a','#8e44ad','#e67e22','#f39c12','#95a5a6'];
     charts.especies = new Chart(get('cEspecies'), {
         type: 'bar',
         data: { labels: sorted.map(([k]) => k.length>24?k.slice(0,22)+'…':k),
@@ -764,7 +803,7 @@ function chartMapa(data) {
     kill('mapa');
     const by = groupBy(data, r => C.estacion(r));
     const stations = Object.keys(by).sort();
-    const palette = ['#1a5c38','#2980b9','#8e44ad','#e67e22','#16a085','#c0392b','#f39c12','#2c3e50'];
+    const palette = ['#1a6fb3','#00b5a3','#8e44ad','#e67e22','#2d9fd4','#c0392b','#f39c12','#0d4a7a'];
     const datasets = stations.map((st, i) => ({
         label: st,
         data: by[st]
@@ -879,3 +918,4 @@ function showAlert(type, icon, msg) {
 </script>
 </body>
 </html>
+Fix datos y logos
