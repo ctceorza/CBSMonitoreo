@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Monitoreo Dasométrico — CBS</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary:       #1a5c38;
+            --primary-dark:  #0d3320;
+            --primary-light: #2d8a57;
+            --accent:        #e8a020;
+            --danger:        #c0392b;
+            --warning:       #f39c12;
+            --success:       #27ae60;
+            --neutral:       #7f8c8d;
+            --bg:            #f0f4f0;
+            --card:          #ffffff;
+            --text:          #1a2e1a;
+            --text-light:    #5a6e5a;
+            --border:        #d0e0d0;
+            --shadow:        0 2px 12px rgba(26,92,56,0.10);
+            --shadow-lg:     0 8px 32px rgba(26,92,56,0.18);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* ── LOADING ── */
+        #loadingOverlay {
+            position: fixed; inset: 0;
+            background: rgba(13,51,32,0.92);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 9999;
+        }
+        .spinner {
+            width: 52px; height: 52px;
+            border: 4px solid rgba(255,255,255,0.2);
+            border-top-color: #4db87a;
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+            margin-bottom: 18px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #loadingOverlay p { color: rgba(255,255,255,0.8); font-size: 14px; letter-spacing: 0.3px; }
+
+        /* ── HEADER ── */
+        .header {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 55%, var(--primary-light) 100%);
+            color: #fff;
+            box-shadow: var(--shadow-lg);
+            position: sticky; top: 0; z-index: 100;
+        }
+        .header-top {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 32px;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+            gap: 16px;
+        }
+        .header-logos { display: flex; align-items: center; gap: 20px; flex-shrink: 0; }
+        .logo-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .logo-img  { height: 44px; width: auto; object-fit: contain; }
+        .logo-box  {
+            height: 44px; padding: 0 14px;
+            background: rgba(255,255,255,0.13);
+            border: 1px solid rgba(255,255,255,0.22);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 16px; letter-spacing: 1.5px;
+            color: #fff;
+        }
+        .logo-role { font-size: 9px; opacity: 0.65; text-transform: uppercase; letter-spacing: 1.2px; }
+        .logo-sep  { width: 1px; height: 44px; background: rgba(255,255,255,0.18); }
+
+        .header-center { text-align: center; flex: 1; }
+        .header-center h1 { font-size: 19px; font-weight: 700; letter-spacing: 0.4px; }
+        .header-center p  { font-size: 11px; opacity: 0.72; margin-top: 3px; }
+
+        .header-meta { text-align: right; min-width: 180px; flex-shrink: 0; }
+        .header-meta .meta-label { font-size: 10px; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.5px; }
+        .header-meta .meta-value { font-size: 13px; font-weight: 600; margin-top: 2px; }
+
+        .header-nav {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 32px; flex-wrap: wrap;
+        }
+        .header-nav .nav-label {
+            font-size: 11px; opacity: 0.7; text-transform: uppercase;
+            letter-spacing: 0.6px; margin-right: 4px;
+        }
+        .camp-btn {
+            padding: 5px 16px; border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.28);
+            background: transparent; color: #fff;
+            cursor: pointer; font-size: 12px; font-weight: 500;
+            transition: all 0.18s;
+        }
+        .camp-btn:hover:not(:disabled) { background: rgba(255,255,255,0.14); }
+        .camp-btn.active {
+            background: rgba(255,255,255,0.24);
+            border-color: rgba(255,255,255,0.7);
+            font-weight: 700;
+        }
+        .camp-btn.ejecucion { border-color: #f0c040; color: #f0c040; }
+        .camp-btn.ejecucion.active { background: rgba(240,192,64,0.2); }
+        .camp-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        /* ── MAIN ── */
+        .main { max-width: 1400px; margin: 0 auto; padding: 22px 24px 52px; }
+
+        /* ── ALERT ── */
+        .alert {
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 13px 18px; border-radius: 12px;
+            margin-bottom: 22px; font-size: 13px; font-weight: 500;
+        }
+        .alert.danger  { background: #fdf0ef; border: 1px solid #e74c3c; color: #922b21; }
+        .alert.warning { background: #fef9e7; border: 1px solid #f39c12; color: #9a6c00; }
+        .alert.success { background: #eafaf1; border: 1px solid #27ae60; color: #1a6b3c; }
+        .alert-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+        /* ── SECTION LABEL ── */
+        .section-title {
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.2px; color: var(--text-light);
+            margin: 20px 0 12px; display: flex; align-items: center; gap: 10px;
+        }
+        .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+        /* ── KPI GRID ── */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 14px; margin-bottom: 4px;
+        }
+        .kpi-card {
+            background: var(--card); border-radius: 14px;
+            padding: 18px 18px 14px;
+            box-shadow: var(--shadow);
+            border-top: 4px solid transparent;
+            transition: transform 0.18s, box-shadow 0.18s;
+            position: relative; overflow: hidden;
+        }
+        .kpi-card::after {
+            content: ''; position: absolute;
+            top: -16px; right: -16px;
+            width: 80px; height: 80px; border-radius: 50%;
+            opacity: 0.07;
+        }
+        .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+
+        .kpi-card.c-green  { border-top-color: #27ae60; }
+        .kpi-card.c-green::after  { background: #27ae60; }
+        .kpi-card.c-red    { border-top-color: #e74c3c; }
+        .kpi-card.c-red::after    { background: #e74c3c; }
+        .kpi-card.c-yellow { border-top-color: #f39c12; }
+        .kpi-card.c-yellow::after { background: #f39c12; }
+        .kpi-card.c-blue   { border-top-color: #2980b9; }
+        .kpi-card.c-blue::after   { background: #2980b9; }
+        .kpi-card.c-primary{ border-top-color: var(--primary); }
+        .kpi-card.c-primary::after{ background: var(--primary); }
+
+        .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-light); font-weight: 700; margin-bottom: 7px; }
+        .kpi-value { font-size: 38px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+        .kpi-sub   { font-size: 11px; color: var(--text-light); }
+
+        .kpi-card.c-green  .kpi-value { color: #27ae60; }
+        .kpi-card.c-red    .kpi-value { color: #e74c3c; }
+        .kpi-card.c-yellow .kpi-value { color: #f39c12; }
+        .kpi-card.c-blue   .kpi-value { color: #2980b9; }
+        .kpi-card.c-primary.kpi-value { color: var(--primary); }
+
+        /* ── CHART CARD ── */
+        .chart-card {
+            background: var(--card); border-radius: 14px;
+            padding: 18px 18px 14px;
+            box-shadow: var(--shadow);
+        }
+        .chart-card h3 {
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.8px; color: var(--text-light);
+            margin-bottom: 14px; padding-bottom: 11px;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 7px;
+        }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); flex-shrink: 0; }
+
+        .charts-row { display: grid; gap: 14px; margin-bottom: 14px; }
+        .r3 { grid-template-columns: repeat(3, 1fr); }
+        .r2 { grid-template-columns: 3fr 2fr; }
+        .r2b{ grid-template-columns: 2fr 1fr; }
+
+        /* ── TABLE ── */
+        .table-card {
+            background: var(--card); border-radius: 14px;
+            padding: 18px; box-shadow: var(--shadow);
+            margin-bottom: 14px; overflow: hidden;
+        }
+        .table-card h3 {
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.8px; color: var(--text-light);
+            margin-bottom: 14px; padding-bottom: 11px;
+            border-bottom: 1px solid var(--border);
+        }
+        .tscroll { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th {
+            background: var(--bg); padding: 9px 11px;
+            text-align: left; font-weight: 700; font-size: 10px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            color: var(--text-light); border-bottom: 2px solid var(--border);
+            white-space: nowrap;
+        }
+        td { padding: 9px 11px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tbody tr:hover td { background: #f6faf6; }
+
+        .badge {
+            display: inline-block; padding: 2px 9px; border-radius: 20px;
+            font-size: 11px; font-weight: 700;
+        }
+        .b-B { background: #d5f5e3; color: #1a6b3c; }
+        .b-R { background: #fef9e7; color: #9a6c00; }
+        .b-M { background: #fdf0ef; color: #922b21; }
+        .b-V { background: #d5f5e3; color: #1a6b3c; }
+        .b-dead { background: #fdf0ef; color: #922b21; }
+
+        /* ── FOOTER ── */
+        footer {
+            text-align: center; padding: 22px;
+            font-size: 11px; color: var(--text-light);
+            border-top: 1px solid var(--border); margin-top: 12px;
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 1100px) {
+            .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+            .r3 { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 760px) {
+            .header-top { flex-direction: column; padding: 12px 16px; }
+            .header-nav { padding: 8px 16px; }
+            .main { padding: 14px 14px 40px; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .r3, .r2, .r2b { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <p>Cargando datos de monitoreo…</p>
+</div>
+
+<!-- HEADER -->
+<header class="header">
+    <div class="header-top">
+
+        <!-- LOGOS -->
+        <div class="header-logos">
+            <!-- ANIN – Contratante -->
+            <div class="logo-item">
+                <img id="logo-anin" class="logo-img" src="" alt="ANIN" style="display:none">
+                <div class="logo-box" id="logo-anin-box">ANIN</div>
+                <span class="logo-role">Contratante</span>
+            </div>
+            <div class="logo-sep"></div>
+            <!-- CBS – Contratista -->
+            <div class="logo-item">
+                <img id="logo-cbs" class="logo-img" src="" alt="CBS" style="display:none">
+                <div class="logo-box" id="logo-cbs-box">CBS</div>
+                <span class="logo-role">Contratista</span>
+            </div>
+            <div class="logo-sep"></div>
+            <!-- CEORZA – Subcontratista -->
+            <div class="logo-item">
+                <img id="logo-ceorza" class="logo-img" src="" alt="CEORZA" style="display:none">
+                <div class="logo-box" id="logo-ceorza-box">CEORZA</div>
+                <span class="logo-role">Subcontratista</span>
+            </div>
+        </div>
+
+        <!-- TITLE -->
+        <div class="header-center">
+            <h1>Dashboard de Monitoreo Dasométrico</h1>
+            <p>Plan de Compensación Ambiental — Seguimiento de Individuos en Área Compensada</p>
+        </div>
+
+        <!-- META -->
+        <div class="header-meta">
+            <div class="meta-label">Última actualización</div>
+            <div class="meta-value" id="lastUpdate">—</div>
+        </div>
+    </div>
+
+    <!-- CAMPAIGN NAV -->
+    <div class="header-nav">
+        <span class="nav-label">Campaña:</span>
+        <div id="campNav"></div>
+    </div>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+
+    <div id="alertBanner" style="display:none"></div>
+
+    <!-- KPIs -->
+    <div class="section-title">Indicadores principales</div>
+    <div class="kpi-grid">
+        <div class="kpi-card c-primary">
+            <div class="kpi-label">Total registros</div>
+            <div class="kpi-value" id="k-total" style="color:var(--primary)">—</div>
+            <div class="kpi-sub">individuos en campaña</div>
+        </div>
+        <div class="kpi-card c-green">
+            <div class="kpi-label">Individuos vivos</div>
+            <div class="kpi-value" id="k-vivos">—</div>
+            <div class="kpi-sub" id="k-vivos-pct">% del total</div>
+        </div>
+        <div class="kpi-card c-red">
+            <div class="kpi-label">Requieren replante</div>
+            <div class="kpi-value" id="k-muertos">—</div>
+            <div class="kpi-sub">posiciones sin individuo</div>
+        </div>
+        <div class="kpi-card c-blue">
+            <div class="kpi-label">Cobertura actual</div>
+            <div class="kpi-value" id="k-cobertura">—</div>
+            <div class="kpi-sub">meta: 95%</div>
+        </div>
+        <div class="kpi-card c-yellow">
+            <div class="kpi-label">Fitosanitario Malo</div>
+            <div class="kpi-value" id="k-fito-m">—</div>
+            <div class="kpi-sub">requieren atención inmediata</div>
+        </div>
+    </div>
+
+    <!-- ROW 1: cobertura + fitosanitario + hídrico -->
+    <div class="section-title">Cobertura y estado general</div>
+    <div class="charts-row r3">
+        <div class="chart-card">
+            <h3><span class="dot" style="background:#2980b9"></span>Cobertura vs Meta 95%</h3>
+            <div style="position:relative;height:210px"><canvas id="cCobertura"></canvas></div>
+        </div>
+        <div class="chart-card">
+            <h3><span class="dot" style="background:#27ae60"></span>Estado Fitosanitario</h3>
+            <div style="position:relative;height:210px"><canvas id="cFito"></canvas></div>
+        </div>
+        <div class="chart-card">
+            <h3><span class="dot" style="background:#1a8a6b"></span>Condiciones Hídricas</h3>
+            <div style="position:relative;height:210px"><canvas id="cHidrico"></canvas></div>
+        </div>
+    </div>
+
+    <!-- ROW 2: altura por estación + composición especies -->
+    <div class="section-title">Métricas dasométricas</div>
+    <div class="charts-row r2">
+        <div class="chart-card">
+            <h3><span class="dot"></span>Altura y diámetro de copa promedio por estación (cm)</h3>
+            <div style="position:relative;height:250px"><canvas id="cAltura"></canvas></div>
+        </div>
+        <div class="chart-card">
+            <h3><span class="dot" style="background:#8e44ad"></span>Composición de especies</h3>
+            <div style="position:relative;height:250px"><canvas id="cEspecies"></canvas></div>
+        </div>
+    </div>
+
+    <!-- ROW 3: inclinación + estado vital/daño -->
+    <div class="charts-row r2b">
+        <div class="chart-card">
+            <h3><span class="dot" style="background:#e67e22"></span>Estado vital y daño mecánico por estación</h3>
+            <div style="position:relative;height:240px"><canvas id="cDano"></canvas></div>
+        </div>
+        <div class="chart-card">
+            <h3><span class="dot" style="background:#c0392b"></span>Plagas y patógenos detectados</h3>
+            <div style="position:relative;height:240px"><canvas id="cPlagas"></canvas></div>
+        </div>
+    </div>
+
+    <!-- MAPA UTM -->
+    <div class="section-title">Distribución espacial</div>
+    <div class="chart-card" style="margin-bottom:14px">
+        <h3><span class="dot" style="background:#16a085"></span>Mapa UTM — individuos monitoreados (rojo = estado M o fitosanitario M)</h3>
+        <div style="position:relative;height:340px"><canvas id="cMapa"></canvas></div>
+    </div>
+
+    <!-- TABLA ESTACIONES -->
+    <div class="section-title">Resumen por estación</div>
+    <div class="table-card">
+        <h3>Tabla comparativa — todas las estaciones</h3>
+        <div class="tscroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Estación</th>
+                        <th>Total</th>
+                        <th>Vivos</th>
+                        <th>Muertos / Replante</th>
+                        <th>Fito. B</th>
+                        <th>Fito. R</th>
+                        <th>Fito. M</th>
+                        <th>Cobertura</th>
+                        <th>Alt. prom. (cm)</th>
+                        <th>Diam. Copa prom. (cm)</th>
+                        <th>Área Basal prom. (cm²)</th>
+                    </tr>
+                </thead>
+                <tbody id="tEstaciones"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TABLA PRIORIDAD -->
+    <div class="section-title">Atención prioritaria</div>
+    <div class="table-card">
+        <h3>Individuos que requieren intervención inmediata</h3>
+        <div class="tscroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Estación</th>
+                        <th>N° Individuo</th>
+                        <th>Nombre común</th>
+                        <th>Nombre científico</th>
+                        <th>Estado vital</th>
+                        <th>Fitosanitario</th>
+                        <th>Hídrico</th>
+                        <th>Daño mecánico</th>
+                        <th>Plaga / Patógeno</th>
+                        <th>Observaciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tPrioridad"></tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<footer>
+    Dashboard de Monitoreo Dasométrico · Datos actualizados automáticamente desde Google Sheets · Desarrollado por CEORZA
+</footer>
+
+<!-- ================================================================
+     JAVASCRIPT
+================================================================ -->
+<script>
+// ─────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────
+const SHEET_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAKjtFd2CPf2H7PELbO1NtaMUytjzK5mMQMLSAHng6aRm1-xUKN44XhAXYzQMh1X8ntyAmOJXgzcVZ/pub?gid={GID}&output=csv';
+const COVERAGE_TARGET = 95;
+
+const CAMPAIGNS = [
+    { id: 'Mon01', nombre: 'Monitoreo 01', fecha: '2026-05-01', estado: 'Completado',   gid: '0' },
+    { id: 'Mon02', nombre: 'Monitoreo 02', fecha: '2026-06-01', estado: 'En ejecución', gid: '1120890811' },
+    { id: 'Mon03', nombre: 'Monitoreo 03', fecha: '2026-07-01', estado: 'Proyectado',   gid: '1869013276' },
+    { id: 'Mon04', nombre: 'Monitoreo 04', fecha: '2026-08-01', estado: 'Proyectado',   gid: '1685891722' },
+];
+
+// ─────────────────────────────────────────────
+// COLUMN ACCESSORS  (handles double-spaces in headers)
+// ─────────────────────────────────────────────
+function col(row, key) {
+    if (row[key] !== undefined) return String(row[key] || '').trim();
+    const k = Object.keys(row).find(k => k.replace(/\s+/g,' ').trim() === key.replace(/\s+/g,' ').trim());
+    return k ? String(row[k] || '').trim() : '';
+}
+
+const C = {
+    estacion:   r => col(r, 'Estación de monitoreo'),
+    cientifico: r => col(r, 'Nombre científico'),
+    comun:      r => col(r, 'Nombre común'),
+    individuo:  r => col(r, 'N° de individuo'),
+    este:       r => parseFloat(col(r, 'Este'))   || 0,
+    norte:      r => parseFloat(col(r, 'Norte'))  || 0,
+    altura:     r => { const v = parseFloat(col(r, 'Altura (cm)')); return isNaN(v) ? null : v; },
+    diamCopa:   r => { const v = parseFloat(col(r, 'Diámetro Copa (cm)')); return isNaN(v) ? null : v; },
+    estado:     r => col(r, 'Estado  V=Vivo o M=Muerto').toUpperCase() || col(r, 'Estado V=Vivo o M=Muerto').toUpperCase(),
+    fito:       r => col(r, 'Estado  Fitosanitario B o R o M').toUpperCase() || col(r, 'Estado Fitosanitario B o R o M').toUpperCase(),
+    hidrico:    r => col(r, 'Condiciones  Hídricas') || col(r, 'Condiciones Hídricas') || 'Sin dato',
+    inclinacion:r => col(r, 'Inclinación'),
+    dano:       r => col(r, 'Daño Mecánico  (ramas/raíces)') || col(r, 'Daño Mecánico (ramas/raíces)'),
+    plaga:      r => col(r, 'Plaga /  Patógeno') || col(r, 'Plaga / Patógeno'),
+    obs:        r => col(r, 'Observaciones'),
+    areaBasal:  r => { const v = parseFloat(col(r, 'Área Basal  (cm²)') || col(r, 'Área Basal (cm²)')); return isNaN(v) ? null : v; },
+};
+
+// ─────────────────────────────────────────────
+// STATE & CHARTS
+// ─────────────────────────────────────────────
+let charts = {};
+
+function kill(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    buildCampaignNav();
+    const first = CAMPAIGNS.find(c => c.estado !== 'Proyectado') || CAMPAIGNS[0];
+    loadCampaign(first);
+});
+
+function buildCampaignNav() {
+    const nav = document.getElementById('campNav');
+    CAMPAIGNS.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'camp-btn' + (c.estado === 'En ejecución' ? ' ejecucion' : '');
+        btn.textContent = c.nombre;
+        btn.dataset.id = c.id;
+        if (c.estado === 'Proyectado') btn.disabled = true;
+        btn.onclick = () => loadCampaign(c);
+        nav.appendChild(btn);
+    });
+}
+
+function setActive(id) {
+    document.querySelectorAll('.camp-btn').forEach(b => b.classList.toggle('active', b.dataset.id === id));
+}
+
+// ─────────────────────────────────────────────
+// DATA LOAD
+// ─────────────────────────────────────────────
+function csvUrl(gid) { return SHEET_BASE.replace('{GID}', gid); }
+
+function fetchCSV(gid) {
+    return new Promise((ok, fail) => {
+        Papa.parse(csvUrl(gid), {
+            download: true, header: true, skipEmptyLines: true,
+            complete: r => ok(r.data),
+            error:   e => fail(e),
+        });
+    });
+}
+
+async function loadCampaign(camp) {
+    loading(true);
+    setActive(camp.id);
+    try {
+        const data = await fetchCSV(camp.gid);
+        render(data, camp);
+    } catch (e) {
+        console.error(e);
+        showAlert('danger', '⚠️', `No se pudieron cargar los datos de <strong>${camp.nombre}</strong>. Verifica que el sheet esté publicado y la pestaña tenga datos.`);
+    } finally {
+        loading(false);
+    }
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleString('es-CL', { dateStyle:'short', timeStyle:'short' });
+}
+
+// ─────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────
+function render(data, camp) {
+    const s = stats(data);
+    renderAlert(s, camp);
+    renderKPIs(s);
+    chartCobertura(s);
+    chartFito(s);
+    chartHidrico(data);
+    chartAltura(data);
+    chartEspecies(data);
+    chartDano(data);
+    chartPlagas(data);
+    chartMapa(data);
+    tableEstaciones(data);
+    tablePrioridad(data);
+}
+
+// ─────────────────────────────────────────────
+// STATS
+// ─────────────────────────────────────────────
+function stats(data) {
+    const total  = data.length;
+    const vivos  = data.filter(r => C.estado(r) === 'V').length;
+    const fitoB  = data.filter(r => C.fito(r) === 'B').length;
+    const fitoR  = data.filter(r => C.fito(r) === 'R').length;
+    const fitoM  = data.filter(r => C.fito(r) === 'M').length;
+    const cobertura = total ? (vivos / total * 100) : 0;
+    return { total, vivos, muertos: total - vivos, fitoB, fitoR, fitoM, cobertura };
+}
+
+function renderAlert(s, camp) {
+    const el = document.getElementById('alertBanner');
+    if (s.cobertura < COVERAGE_TARGET) {
+        showAlert('danger', '⚠️',
+            `Cobertura bajo la meta en <strong>${camp.nombre}</strong>: <strong>${s.cobertura.toFixed(1)}%</strong> vs objetivo 95% —
+             ${s.muertos} posiciones requieren replante —
+             ${s.fitoM} individuo(s) en estado fitosanitario Malo`);
+    } else {
+        showAlert('success', '✅',
+            `Cobertura dentro de meta en <strong>${camp.nombre}</strong>: <strong>${s.cobertura.toFixed(1)}%</strong> — objetivo 95% cumplido`);
+    }
+}
+
+function renderKPIs(s) {
+    setText('k-total',    s.total);
+    setText('k-vivos',    s.vivos);
+    setText('k-vivos-pct', `${(s.vivos / s.total * 100).toFixed(1)}% del total`);
+    setText('k-muertos',  s.muertos);
+    setText('k-cobertura', `${s.cobertura.toFixed(1)}%`);
+    setText('k-fito-m',   s.fitoM);
+}
+
+// ─────────────────────────────────────────────
+// CHARTS
+// ─────────────────────────────────────────────
+function chartCobertura(s) {
+    kill('cobertura');
+    const ctx = get('cCobertura');
+    const pct = Math.min(s.cobertura, 100);
+    const color = pct >= COVERAGE_TARGET ? '#27ae60' : '#e74c3c';
+    charts.cobertura = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Cobertura', 'Déficit'],
+            datasets: [{ data: [pct, Math.max(0, 100-pct)], backgroundColor: [color, '#ecf0f1'], borderWidth: 0, circumference: 180, rotation: 270 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            cutout: '74%',
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        },
+        plugins: [{
+            id: 'gauge-text',
+            afterDraw(chart) {
+                const { ctx, width, height } = chart;
+                ctx.save();
+                const cx = width / 2, cy = height * 0.80;
+                ctx.textAlign = 'center';
+                ctx.font = `bold 30px 'Segoe UI', sans-serif`;
+                ctx.fillStyle = color;
+                ctx.fillText(`${pct.toFixed(1)}%`, cx, cy);
+                ctx.font = `11px 'Segoe UI', sans-serif`;
+                ctx.fillStyle = '#7f8c8d';
+                ctx.fillText(`Meta: ${COVERAGE_TARGET}%`, cx, cy + 19);
+                ctx.restore();
+            }
+        }]
+    });
+}
+
+function chartFito(s) {
+    kill('fito');
+    charts.fito = new Chart(get('cFito'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Bueno (B)', 'Regular (R)', 'Malo (M)'],
+            datasets: [{ data: [s.fitoB, s.fitoR, s.fitoM], backgroundColor: ['#27ae60','#f39c12','#e74c3c'], borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: { responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12, font:{size:11} } } } }
+    });
+}
+
+function chartHidrico(data) {
+    kill('hidrico');
+    const counts = {};
+    data.forEach(r => { const h = C.hidrico(r) || 'Sin dato'; counts[h] = (counts[h]||0)+1; });
+    const keys = Object.keys(counts), vals = Object.values(counts);
+    const colors = ['#1a5c38','#2d8a57','#5dade2','#f39c12','#e74c3c','#95a5a6','#8e44ad'];
+    charts.hidrico = new Chart(get('cHidrico'), {
+        type: 'doughnut',
+        data: { labels: keys, datasets: [{ data: vals, backgroundColor: colors.slice(0, keys.length), borderWidth: 2, borderColor: '#fff' }] },
+        options: { responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12, font:{size:11} } } } }
+    });
+}
+
+function chartAltura(data) {
+    kill('altura');
+    const by = groupBy(data, r => C.estacion(r));
+    const labs = Object.keys(by).sort();
+    const avgH = labs.map(s => avg(by[s].map(r => C.altura(r)).filter(v=>v!==null)));
+    const avgD = labs.map(s => avg(by[s].map(r => C.diamCopa(r)).filter(v=>v!==null)));
+    charts.altura = new Chart(get('cAltura'), {
+        type: 'bar',
+        data: { labels: labs, datasets: [
+            { label:'Altura prom. (cm)',       data: avgH, backgroundColor:'#1a5c38', borderRadius:6 },
+            { label:'Diám. Copa prom. (cm)',   data: avgD, backgroundColor:'#82c4a0', borderRadius:6 },
+        ]},
+        options: { responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{ labels:{ boxWidth:12, font:{size:11} } } },
+            scales:{ y:{ beginAtZero:true, grid:{ color:'#f0f0f0' } }, x:{ grid:{ display:false } } }
+        }
+    });
+}
+
+function chartEspecies(data) {
+    kill('especies');
+    const counts = {};
+    data.forEach(r => { const sp = C.cientifico(r) || C.comun(r) || 'Sin dato'; counts[sp] = (counts[sp]||0)+1; });
+    const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,8);
+    const colors = ['#1a5c38','#2d8a57','#4db87a','#82c4a0','#8e44ad','#2980b9','#e67e22','#f39c12'];
+    charts.especies = new Chart(get('cEspecies'), {
+        type: 'bar',
+        data: { labels: sorted.map(([k]) => k.length>24?k.slice(0,22)+'…':k),
+                datasets: [{ data: sorted.map(([,v])=>v), backgroundColor: colors, borderRadius:6 }] },
+        options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{ display:false } },
+            scales:{ x:{ beginAtZero:true, grid:{ color:'#f0f0f0' } }, y:{ grid:{ display:false }, ticks:{ font:{size:10} } } }
+        }
+    });
+}
+
+function chartDano(data) {
+    kill('dano');
+    const by = groupBy(data, r => C.estacion(r));
+    const labs = Object.keys(by).sort();
+    charts.dano = new Chart(get('cDano'), {
+        type: 'bar',
+        data: { labels: labs, datasets: [
+            { label:'Vivos',            data: labs.map(s => by[s].filter(r=>C.estado(r)==='V').length), backgroundColor:'#27ae60', borderRadius:4 },
+            { label:'Muertos',          data: labs.map(s => by[s].filter(r=>C.estado(r)==='M').length), backgroundColor:'#e74c3c', borderRadius:4 },
+            { label:'Con daño mecánico',data: labs.map(s => by[s].filter(r=>{ const d=(C.dano(r)||'').toLowerCase(); return d&&d!=='no'&&d!=='ninguno'&&d!=='sin daño'&&d!==''; }).length), backgroundColor:'#e67e22', borderRadius:4 },
+        ]},
+        options: { responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{ labels:{ boxWidth:12, font:{size:11} } } },
+            scales:{ x:{ grid:{ display:false } }, y:{ beginAtZero:true, grid:{ color:'#f0f0f0' } } }
+        }
+    });
+}
+
+function chartPlagas(data) {
+    kill('plagas');
+    const counts = {};
+    data.forEach(r => {
+        const p = C.plaga(r);
+        if (!p || ['no','ninguno','sin plaga','','n/a','-'].includes(p.toLowerCase())) return;
+        counts[p] = (counts[p]||0)+1;
+    });
+    const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+    if (!entries.length) {
+        const canvas = get('cPlagas');
+        const ctx2 = canvas.getContext('2d');
+        ctx2.save();
+        ctx2.font = '13px Segoe UI'; ctx2.fillStyle = '#7f8c8d'; ctx2.textAlign = 'center';
+        ctx2.fillText('Sin plagas o patógenos detectados', canvas.parentElement.clientWidth/2, 110);
+        ctx2.restore();
+        return;
+    }
+    charts.plagas = new Chart(get('cPlagas'), {
+        type: 'bar',
+        data: { labels: entries.map(([k])=>k), datasets:[{ data:entries.map(([,v])=>v), backgroundColor:'#c0392b', borderRadius:4 }] },
+        options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{ display:false } },
+            scales:{ x:{ beginAtZero:true, grid:{color:'#f0f0f0'} }, y:{ grid:{display:false}, ticks:{font:{size:11}} } }
+        }
+    });
+}
+
+function chartMapa(data) {
+    kill('mapa');
+    const by = groupBy(data, r => C.estacion(r));
+    const stations = Object.keys(by).sort();
+    const palette = ['#1a5c38','#2980b9','#8e44ad','#e67e22','#16a085','#c0392b','#f39c12','#2c3e50'];
+    const datasets = stations.map((st, i) => ({
+        label: st,
+        data: by[st]
+            .map(r => ({ x: C.este(r), y: C.norte(r), fito: C.fito(r), estado: C.estado(r), ind: C.individuo(r), comun: C.comun(r) }))
+            .filter(p => p.x && p.y),
+        backgroundColor: by[st].map(r => (C.estado(r)==='M'||C.fito(r)==='M') ? 'rgba(231,76,60,0.85)' : palette[i%palette.length]+'cc'),
+        pointRadius: 6, pointHoverRadius: 9,
+    }));
+    charts.mapa = new Chart(get('cMapa'), {
+        type: 'scatter',
+        data: { datasets },
+        options: {
+            responsive:true, maintainAspectRatio:false,
+            plugins: {
+                legend: { position:'bottom', labels:{ boxWidth:10, font:{size:11} } },
+                tooltip: { callbacks: { label: ctx => {
+                    const p = ctx.raw;
+                    return `${ctx.dataset.label} · #${p.ind} ${p.comun} | Fito:${p.fito} | ${p.estado==='V'?'Vivo':'Muerto'} | E:${p.x.toFixed(0)} N:${p.y.toFixed(0)}`;
+                }}}
+            },
+            scales: {
+                x: { title:{ display:true, text:'Este (UTM)' }, grid:{ color:'#f0f0f0' } },
+                y: { title:{ display:true, text:'Norte (UTM)' }, grid:{ color:'#f0f0f0' } }
+            }
+        }
+    });
+}
+
+// ─────────────────────────────────────────────
+// TABLES
+// ─────────────────────────────────────────────
+function tableEstaciones(data) {
+    const by = groupBy(data, r => C.estacion(r));
+    const rows = Object.keys(by).sort().map(st => {
+        const rr = by[st];
+        const tot = rr.length;
+        const viv = rr.filter(r=>C.estado(r)==='V').length;
+        const mue = tot - viv;
+        const fB  = rr.filter(r=>C.fito(r)==='B').length;
+        const fR  = rr.filter(r=>C.fito(r)==='R').length;
+        const fM  = rr.filter(r=>C.fito(r)==='M').length;
+        const cob = tot ? (viv/tot*100).toFixed(1) : '0.0';
+        const cobStyle = parseFloat(cob)>=COVERAGE_TARGET ? 'color:#27ae60;font-weight:700' : 'color:#e74c3c;font-weight:700';
+        const aH  = avg(rr.map(r=>C.altura(r)).filter(v=>v!==null));
+        const aD  = avg(rr.map(r=>C.diamCopa(r)).filter(v=>v!==null));
+        const aB  = avg(rr.map(r=>C.areaBasal(r)).filter(v=>v!==null));
+        return `<tr>
+            <td><strong>${st}</strong></td>
+            <td>${tot}</td>
+            <td>${viv}</td>
+            <td>${mue>0?`<span style="color:#e74c3c;font-weight:600">${mue}</span>`:'0'}</td>
+            <td><span class="badge b-B">${fB}</span></td>
+            <td><span class="badge b-R">${fR}</span></td>
+            <td>${fM>0?`<span class="badge b-M">${fM}</span>`:'<span class="badge b-B">0</span>'}</td>
+            <td style="${cobStyle}">${cob}%</td>
+            <td>${aH!==null?aH.toFixed(1):'—'}</td>
+            <td>${aD!==null?aD.toFixed(1):'—'}</td>
+            <td>${aB!==null?aB.toFixed(2):'—'}</td>
+        </tr>`;
+    });
+    document.getElementById('tEstaciones').innerHTML = rows.join('');
+}
+
+function tablePrioridad(data) {
+    const priority = data.filter(r => {
+        const p = C.plaga(r).toLowerCase();
+        return C.estado(r)==='M' || C.fito(r)==='M' || (p && !['no','ninguno','sin plaga','','n/a','-'].includes(p));
+    });
+    if (!priority.length) {
+        document.getElementById('tPrioridad').innerHTML =
+            `<tr><td colspan="10" style="text-align:center;color:#27ae60;padding:20px;font-weight:500">
+                ✅ Sin individuos que requieran intervención inmediata en esta campaña.
+            </td></tr>`;
+        return;
+    }
+    const rows = priority.map(r => {
+        const est = C.estado(r), fit = C.fito(r);
+        return `<tr>
+            <td><strong>${C.estacion(r)}</strong></td>
+            <td>${C.individuo(r)}</td>
+            <td>${C.comun(r)}</td>
+            <td><em>${C.cientifico(r)}</em></td>
+            <td><span class="badge ${est==='V'?'b-V':'b-dead'}">${est==='V'?'Vivo':'Muerto'}</span></td>
+            <td><span class="badge b-${fit}">${fit==='B'?'Bueno':fit==='R'?'Regular':'Malo'}</span></td>
+            <td>${C.hidrico(r)}</td>
+            <td>${C.dano(r)||'—'}</td>
+            <td>${C.plaga(r)||'—'}</td>
+            <td style="max-width:180px;white-space:normal;font-size:11px">${C.obs(r)||'—'}</td>
+        </tr>`;
+    });
+    document.getElementById('tPrioridad').innerHTML = rows.join('');
+}
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+function groupBy(arr, fn) {
+    return arr.reduce((a, x) => { const k=fn(x); (a[k]=a[k]||[]).push(x); return a; }, {});
+}
+function avg(arr) { return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null; }
+function get(id)   { return document.getElementById(id); }
+function setText(id, val) { const el=get(id); if(el) el.textContent=val; }
+
+function loading(show) { get('loadingOverlay').style.display = show ? 'flex' : 'none'; }
+
+function showAlert(type, icon, msg) {
+    const el = get('alertBanner');
+    el.className = `alert ${type}`;
+    el.style.display = 'flex';
+    el.innerHTML = `<span class="alert-icon">${icon}</span><div>${msg}</div>`;
+}
+</script>
+</body>
+</html>
